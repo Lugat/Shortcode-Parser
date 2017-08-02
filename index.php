@@ -18,11 +18,15 @@
   
   Shortcode::register('time', function($attr, $content) {
     
+    $attr = array_replace([
+      'format' => 'H:i:s'
+    ], $attr);
+    
     return date($attr['format']);
     
   });
 
   
-  $content = 'Es ist genau [b][time format="H:i:s" prefix="Uhr"][/b] Uhr. Außerdem ist heute [b][day][/b].';
+  $content = 'Es ist genau [b tag="b"][time format="h:i:s A"] Uhr[/b] Uhr. Außerdem ist heute [b][day][/b].';
   
   echo Shortcode::parse($content);
