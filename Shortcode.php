@@ -8,7 +8,7 @@
    * @copyright Copyright (c) 2017 SquareFlower Websolutions
    * @license BSD License
    * @author Lukas Rydygel <hallo@squareflower.de>
-   * @version 0.1
+   * @version 0.2
    */
   
   abstract class Shortcode
@@ -23,21 +23,23 @@
     
     /**
      * Register a callback function for a shortcode
+     * Default attributes can be pased
      * 
      * Existing shortcodes can't be overwritten, they must be unregistered first
      * 
      * @param string $tag
      * @param mixed $callback
+     * @param array $attr
      * @return boolean
      */
-    public static function register($tag, $callback)
+    public static function register($tag, $callback, array $attr = [])
     {
       
       // check if the shortcode exists
       if (!array_key_exists($tag, self::$shortcodes)) {
         
         // register the shortcode
-        self::$shortcodes[$tag] = $callback;
+        self::$shortcodes[$tag] = ['callback' => $callback, 'attr' => $attr];
         return true;
         
       }
@@ -118,7 +120,7 @@
       }
       
       // intersect by the registered tags
-      return array_intersect_key(self::$shortcodes, array_combine($allow, $allow));
+      return array_intersect_key(self::$shortcodes, array_flip($allow, $allow));
       
     }
     
@@ -139,7 +141,7 @@
       return preg_replace_callback($regexp, function($matches) {
         
         // default values
-        $params = [];
+        $attr = [];
         $content = '';
         
         // check for the number of matches
@@ -150,22 +152,24 @@
             list(, $tag) = $matches;
           break;
         
-          // shortcode with params, no content
+          // shortcode with attr, no content
           case 4:
-            list(, $tag, , $params) = $matches;
+            list(, $tag, , $attr) = $matches;
           break;
         
-          // shortcodes with params and content
+          // shortcodes with attr and content
           case 5:
-            list(, $tag, , $params, $content) = $matches;
+            list(, $tag, , $attr, $content) = $matches;
           break;
           
         }
         
         // if no params were found, they don't need to be parsed
-        if (!is_array($params)) {
-          $params = self::parseParams($params);
+        if (!is_array($attr)) {
+          $attr = self::parseAttributes($attr);
         }
+        
+        $attr = array_replace($attr, self::$shortcodes[$tag]['attr']);
         
         // check for the closest closing tag
         $content = explode("[/{$tag}]", $content, 2);
@@ -175,7 +179,7 @@
         $inner = self::parse(array_pop($content));
         
         // run the callback with params and content
-        return call_user_func_array(self::$shortcodes[$tag], [$params, $inner]).$after;
+        return call_user_func_array(self::$shortcodes[$tag]['callback'], [$attr, $inner]).$after;
 
       }, $content);
       
@@ -199,22 +203,17 @@
     }
     
     /**
-     * Parses the params by creating a query-string
+     * Parses the attributes by using XML
      * 
-     * @param string $string
+     * @param string $attr
      * @return array
      */
-    protected static function parseParams($string)
+    protected static function parseAttributes($attr)
     {
       
-      $pattern = ['" ', '="', '"'];
-      $replace = ['&', '=', ''];
+      $xml = (array) new \SimpleXMLElement("<element $attr />"); 
       
-      $query = str_replace($pattern, $replace, $string);
-      
-      parse_str($query, $params);
-      
-      return $params;
+      return array_key_exists('@attributes', $xml) ? $xml['@attributes'] : [];
       
     }
 
