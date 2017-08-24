@@ -28,4 +28,4 @@
   
   $content = 'Es ist genau [b tag="b"][time format="h:i:s A"] Uhr[/b] Uhr. Außerdem ist heute [b][day][/b].';
   
-  echo Shortcode::parse($content);
+  echo Shortcode::process($content);

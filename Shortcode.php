@@ -8,7 +8,7 @@
    * @copyright Copyright (c) 2017 SquareFlower Websolutions
    * @license BSD License
    * @author Lukas Rydygel <hallo@squareflower.de>
-   * @version 0.2
+   * @version 0.2.1
    */
   
   abstract class Shortcode
@@ -71,7 +71,7 @@
     }
 
     /**
-     * Parse all shortcodes inside a string
+     * Process all shortcodes inside a string
      * 
      * You may also allow only certain shortcodes. If no shortcodes were specified, all registered shortcodes will be used.
      * 
@@ -79,7 +79,7 @@
      * @param array $allow
      * @return type
      */
-    public static function parse($content, array $allow = [])
+    public static function process($content, array $allow = [])
     {
       
       // return if content is empty
