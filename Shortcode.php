@@ -175,8 +175,8 @@
         $content = explode("[/{$tag}]", $content, 2);
         
         // parse the content inside and after the shortcode
-        $after = self::parse(array_pop($content));
-        $inner = self::parse(array_pop($content));
+        $after = self::process(array_pop($content));
+        $inner = self::process(array_pop($content));
         
         // run the callback with params and content
         return call_user_func_array(self::$shortcodes[$tag]['callback'], [$attr, $inner]).$after;
