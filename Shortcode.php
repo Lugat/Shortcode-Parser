@@ -5,10 +5,10 @@
   /**
    * Simple Shortcode Parser
    * 
-   * @copyright Copyright (c) 2017 SquareFlower Websolutions
+   * @copyright Copyright (c) 2018 SquareFlower Websolutions
    * @license BSD License
    * @author Lukas Rydygel <hallo@squareflower.de>
-   * @version 0.2.1
+   * @version 0.3
    */
   
   abstract class Shortcode
@@ -111,7 +111,7 @@
      * @param array $allow
      * @return array
      */
-    protected function getAllowedShortcodes(array $allow)
+    protected static function getAllowedShortcodes(array $allow)
     {
       
       // return all if no shortcodes were specified
@@ -131,12 +131,95 @@
      * @param string $content
      * @return string
      */
-    protected function execute($shortcodes, $content)
+    protected static function execute($shortcodes, $content)
     {
       
+      $offset = 0;
+      
+      foreach ($shortcodes as $tag => $data) {
+        
+        // Regular expression for opening and closing tags
+        $open = "/\[{$tag}(\s(.*?))?\]/i";
+        $close = "/\[\/{$tag}\]/i";
+        
+        $size = strlen($tag)+3;
+                
+        if (preg_match_all($open, $content, $openMatches, PREG_OFFSET_CAPTURE) && preg_match_all($close, $content, $closeMatches, PREG_OFFSET_CAPTURE)) {
+          
+          // Find matching tags
+          $matches = self::findMatchingTags($openMatches[0], $closeMatches[0]);
+          
+          // Walk through matching tags
+          foreach ($matches as $match) {
+            
+            // Calculate the start and endpoint of the part
+            $start = $match[0];
+            $end = $match[1] - $start + $size + $offset;
+
+            // Get the part from the content
+            $part = substr($content, $start, $end);
+            
+            $length = strlen($part);
+
+            // Replace the part with the parsed results from the shortcode
+            $replace = self::parseTagInPart($tag, $part);
+            $content = substr_replace($content, $replace, $start, $end);
+            
+            // Correct the offset
+            $offset += strlen($replace) - $length;
+             
+          }
+
+        }
+              
+      }
+                  
+      return self::parseEmptyTags($shortcodes, $content);
+      
+    }
+    
+    protected static function findMatchingTags($openMatches, $closeMatches)
+    {
+      
+      $tags = [];
+      
+      foreach (array_reverse($openMatches) as $i => $openMatch) {
+                
+        $diff = null;
+        
+        foreach ($closeMatches as $j => $closeMatch) {
+          
+          if ($openMatch[1] < $closeMatch[1]) {
+            
+            $d = $closeMatch[1] - $openMatch[0];
+            
+            if (!isset($diff) || $d < $diff) {
+              
+              $diff = $d;
+              
+              $tags[$i] = [$openMatch[1], $closeMatch[1]];
+              
+              unset($openMatches[$i]);
+              unset($closeMatches[$j]);
+              
+            }
+            
+          }
+          
+        }
+        
+      }
+      
+      return $tags;
+      
+    }
+    
+    protected static function parseEmptyTags($shortcodes, $content)
+    {
+            
       // get the regular expression for the given shortcodes
       $regexp = self::createRegExp($shortcodes);
-      
+            
       // run a replace callback for the regular expression
       return preg_replace_callback($regexp, function($matches) {
         
@@ -147,41 +230,92 @@
         // check for the number of matches
         switch (count($matches)) {
           
-          // shortcode without params and contnet
+          // shortcode without params
           case 2:
             list(, $tag) = $matches;
           break;
         
-          // shortcode with attr, no content
+          // shortcode with attr
           case 4:
             list(, $tag, , $attr) = $matches;
-          break;
-        
-          // shortcodes with attr and content
-          case 5:
-            list(, $tag, , $attr, $content) = $matches;
           break;
           
         }
         
-        // if no params were found, they don't need to be parsed
-        if (!is_array($attr)) {
-          $attr = self::parseAttributes($attr);
-        }
+        return self::parseInternal($tag, $attr);
         
-        $attr = array_replace($attr, self::$shortcodes[$tag]['attr']);
-        
-        // check for the closest closing tag
-        $content = explode("[/{$tag}]", $content, 2);
-        
-        // parse the content inside and after the shortcode
-        $after = self::process(array_pop($content));
-        $inner = self::process(array_pop($content));
-        
-        // run the callback with params and content
-        return call_user_func_array(self::$shortcodes[$tag]['callback'], [$attr, $inner]).$after;
-
       }, $content);
+      
+    }
+    
+    /**
+     * Parse a single shortcode in a given part of the content
+     * 
+     * @param string $tag
+     * @param string $part
+     * @return string
+     */
+    protected static function parseTagInPart($tag, $part)
+    {
+      
+      $regexp = "/\[{$tag}(\s(.*?))?\](.*)\[\/{$tag}\]/i";
+      
+      return preg_replace_callback($regexp, function($matches) use($tag) {
+
+        // default values
+        $attr = [];
+        $content = '';
+
+        // check for the number of matches
+        switch (count($matches)) {
+
+          // shortcode with attr, no content
+          case 3:
+            list(, , $attr) = $matches;
+          break;
+
+          // shortcodes with attr and content
+          case 4:
+            list(, , $attr, $content) = $matches;
+          break;
+
+        }
+
+        return self::parseInternal($tag, $attr, $content);
+
+      }, $part);
+      
+    }
+    
+    protected static function parseInternal($tag, $attr, $content = '')
+    {
+      
+      $content = trim($content);
+      
+      // if no params were found, they don't need to be parsed
+      if (!is_array($attr)) {
+        $attr = self::parseAttributes($attr);
+      }
+
+      $attr = array_replace($attr, self::$shortcodes[$tag]['attr']);
+
+      // run the callback with params and content
+      return call_user_func_array(self::$shortcodes[$tag]['callback'], [$attr, $content]);
+      
+    }
+    
+    /**
+     * Parses the attributes by using XML
+     * 
+     * @param string $attr
+     * @return array
+     */
+    protected static function parseAttributes($attr)
+    {
+      
+      $xml = (array) new \SimpleXMLElement("<element $attr />"); 
+      
+      return array_key_exists('@attributes', $xml) ? $xml['@attributes'] : [];
       
     }
     
@@ -198,22 +332,7 @@
       
       $tags = implode('|', array_keys($shortcodes));
       
-      return "/\[({$tags})(\s(.*?))?\](.*)?/"; 
-      
-    }
-    
-    /**
-     * Parses the attributes by using XML
-     * 
-     * @param string $attr
-     * @return array
-     */
-    protected static function parseAttributes($attr)
-    {
-      
-      $xml = (array) new \SimpleXMLElement("<element $attr />"); 
-      
-      return array_key_exists('@attributes', $xml) ? $xml['@attributes'] : [];
+      return "/\[({$tags})(\s(.*?))?\/\]/"; 
       
     }
 
