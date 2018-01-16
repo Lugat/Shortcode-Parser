@@ -16,6 +16,10 @@ Empty shortcodes can be written in both ways: [tag] or [tag /]
   echo Shortcode::process($input);
 ```
 
+#### Output
+
+Week in this year: 42
+
 ### Simple shortcodes
 
 ```PHP
