@@ -8,7 +8,7 @@
    * @copyright Copyright (c) 2018 SquareFlower Websolutions
    * @license BSD License
    * @author Lukas Rydygel <hallo@squareflower.de>
-   * @version 0.3
+   * @version 0.3.2
    */
   
   abstract class Shortcode
@@ -81,7 +81,7 @@
      */
     public static function process($content, array $allow = [])
     {
-      
+                        
       // return if content is empty
       if (empty($content)) {
         return $content;
@@ -133,7 +133,7 @@
      */
     protected static function execute($shortcodes, $content)
     {
-      
+            
       $offset = 0;
       
       foreach ($shortcodes as $tag => $data) {
@@ -158,7 +158,6 @@
 
             // Get the part from the content
             $part = substr($content, $start, $end);
-            
             $length = strlen($part);
 
             // Replace the part with the parsed results from the shortcode
@@ -191,7 +190,7 @@
           
           if ($openMatch[1] < $closeMatch[1]) {
             
-            $d = $closeMatch[1] - $openMatch[0];
+            $d = $closeMatch[1] - $openMatch[1];
             
             if (!isset($diff) || $d < $diff) {
               
@@ -258,7 +257,7 @@
     protected static function parseTagInPart($tag, $part)
     {
       
-      $regexp = "/\[{$tag}(\s(.*?))?\](.*)\[\/{$tag}\]/i";
+      $regexp = "/\[{$tag}(\s(.*?))?\](.*)\[\/{$tag}\]/is";
       
       return preg_replace_callback($regexp, function($matches) use($tag) {
 
@@ -332,7 +331,7 @@
       
       $tags = implode('|', array_keys($shortcodes));
       
-      return "/\[({$tags})(\s(.*?))?\/\]/"; 
+      return "/\[({$tags})(\s(.*?))?\/?\]/is"; 
       
     }
 
