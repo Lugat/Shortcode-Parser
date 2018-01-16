@@ -97,5 +97,13 @@ It's 12 o'clock!
 #### Output
 
 ```HTML
-<div class="row"><div class="col-sm-9">Col 1<div class="row"><div class="col-sm-6">Col 1.1</div><div class="col-sm-6">Col 1.2</div></div></div><div class="col-sm-3">Col 2</div></div>
+<div class="row">
+  <div class="col-sm-9">Col 1
+    <div class="row">
+      <div class="col-sm-6">Col 1.1</div>
+      <div class="col-sm-6">Col 1.2</div>
+    </div>
+  </div>
+  <div class="col-sm-3">Col 2</div>
+</div>
 ```
